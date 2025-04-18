@@ -1,0 +1,6 @@
+
+int addPath(char* path);
+
+
+
+

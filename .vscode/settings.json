@@ -1,0 +1,25 @@
+{
+    "files.associations": {
+        "inet.h": "c",
+        "unistd.h": "c",
+        "parse.h": "c",
+        "stat.h": "c",
+        "colors.h": "c",
+        "conf.h": "c",
+        "argsparser.h": "c",
+        "hardware.h": "c",
+        "confvar.h": "c",
+        "server.h": "c",
+        "stdint.h": "c",
+        "directoryparser.h": "c",
+        "endpoints.h": "c",
+        "consts.h": "c",
+        "serverconf.h": "c",
+        "string.h": "c",
+        "mman.h": "c",
+        "stdlib.h": "c",
+        "response.h": "c",
+        "stdio.h": "c",
+        "main.h": "c"
+    }
+}
