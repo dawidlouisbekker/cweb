@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Compile the program
-gcc main.c base/serverconf.c -o cweb
+gcc main.c compiler/main.c -o cweb
 
 # Check if compilation was successful
 if [ $? -eq 0 ]; then
