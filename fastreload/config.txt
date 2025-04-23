@@ -1,0 +1,2 @@
+../server.h
+gcc ../main.c ../compiler/include/main.c -o ../cweb

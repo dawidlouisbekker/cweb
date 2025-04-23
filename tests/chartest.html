@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head><title>WASM Char Array</title></head>
+<body>
+  <h2>WASM Char Array</h2>
+
+  <input id="charInput" placeholder="Enter a letter">
+  <input id="charIndex" type="number" placeholder="Index" value="0">
+  <button onclick="setChar()">Set Char</button>
+
+  <input id="readIndex" type="number" placeholder="Read Index" value="0">
+  <button onclick="getChar()">Get Char</button>
+
+  <p>Character at index: <span id="charOutput"></span></p>
+
+  <script>
+    let wasm;
+
+    async function loadWasm() {
+      const res = await fetch('char_array.wasm');
+      const buffer = await res.arrayBuffer();
+      const { instance } = await WebAssembly.instantiate(buffer);
+      wasm = instance;
+    }
+
+    function setChar() {
+      const char = document.getElementById('charInput').value.charCodeAt(0);
+      const index = parseInt(document.getElementById('charIndex').value, 10);
+      wasm.exports.set_char(index, char);
+    }
+
+    function getChar() {
+      const index = parseInt(document.getElementById('readIndex').value, 10);
+      const code = wasm.exports.get_char(index);
+      const char = String.fromCharCode(code);
+      document.getElementById('charOutput').textContent = char;
+    }
+
+    loadWasm();
+  </script>
+</body>
+</html>

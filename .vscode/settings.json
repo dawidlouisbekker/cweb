@@ -20,6 +20,10 @@
         "stdlib.h": "c",
         "response.h": "c",
         "stdio.h": "c",
-        "main.h": "c"
+        "main.h": "c",
+        "stdarg.h": "c",
+        "random": "c",
+        "*.tcc": "c",
+        "parser.h": "c"
     }
 }

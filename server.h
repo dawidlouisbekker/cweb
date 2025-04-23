@@ -1,14 +1,26 @@
 #include "base/serverconf.h"
+#include "base/parser.h"
+
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <stdio.h>
 #include <string.h>
+#include <liburing.h>
 
-#define PORT 8081
-#define BUFFER_SIZE 4096
+#define PORT 8082
+
 #define DEBUG_LOG 0
+
+#define BACKLOG 128
+#define QUEUE_DEPTH 64
+#define BUFFER_SIZE 4096
+
+#define CLIENT_HANDLER_THREADS 6
+#define CLIENT_HANDLER_STACK_SIZE 2048
+
 const int PATH_SIZE = 1024;
 
 const char* favCon = "/favicon.ico";
@@ -41,7 +53,10 @@ void handleEndpoint(char* path, int client_socket) {
     }
 }
 
-void parse_http_request(const char *request, int client_socket) {
+
+
+
+void parse_http_request(char *request, int client_socket) {
     char method[8] = {0};
     char path[1024] = {0};
 
@@ -78,8 +93,8 @@ void parse_http_request(const char *request, int client_socket) {
 void startSTServer(int server_fd, struct sockaddr_in* address_ptr, int* addrlen_ptr, int verbose) {
     int new_socket;
     char buffer[BUFFER_SIZE] = {0};
+    HeaderScanResult result;
     while (1) {
-
         if ((new_socket = accept(server_fd, (struct sockaddr *)address_ptr, (socklen_t*)addrlen_ptr)) < 0) {
             perror("Accept failed");
             continue;
@@ -89,8 +104,9 @@ void startSTServer(int server_fd, struct sockaddr_in* address_ptr, int* addrlen_
         if (bytes_read > 0) {
             buffer[bytes_read] = '\0';  // Null-terminate the string
             //if (verbose == 1) {
-                //printf("raw: %s",buffer);
-            //}
+            printf("----------\n%s",buffer);
+            result = fast_header_scan(buffer, new_socket);
+            printf("%d",result.has_heavy_headers);
             printf("Received request.");
             parse_http_request(buffer,new_socket);
         }

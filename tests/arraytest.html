@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WASM Array Access</title>
+</head>
+<body>
+  <h1>WASM Array Access</h1>
+
+  <label for="index">Index:</label>
+  <input type="number" id="index" value="0">
+  <button onclick="readFromWasm()">Get Value</button>
+  <p>Value at index: <span id="result">N/A</span></p>
+
+  <script>
+    let wasmInstance;
+
+    async function loadWasm() {
+      const response = await fetch('array.wasm');
+      const buffer = await response.arrayBuffer();
+      const { instance } = await WebAssembly.instantiate(buffer);
+
+      wasmInstance = instance;
+
+      // For demonstration: Set a few values in the "array"
+      wasmInstance.exports.set_array(0, 42);
+      wasmInstance.exports.set_array(1, 1337);
+      wasmInstance.exports.set_array(2, 2025);
+    }
+
+    function readFromWasm() {
+      const index = parseInt(document.getElementById("index").value, 10);
+      const result = wasmInstance.exports.get_array(index);
+      document.getElementById("result").textContent = result;
+    }
+
+    loadWasm();
+  </script>
+</body>
+</html>
