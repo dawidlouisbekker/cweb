@@ -6,7 +6,7 @@ void printGreen(const char *text) {
 
 // Function to print text in blue
 void printBlue(const char *text) {
-    printf("\033[34m%s\033[0m\n", text);
+    printf("\033[34m%s\033[0m", text);
 }
 
 // Function to print text in yellow
@@ -14,6 +14,13 @@ void printYellow(const char *text) {
     printf("\033[33m%s\033[0m\n", text);
 }
 
+void setYellow() {
+    printf("\033[33m");
+};
+
+void resetCol(){
+    printf("\033[0m");
+};
 // Function to print text in red
 void printRed(const char *text) {
     printf("\033[31m%s\033[0m\n", text);

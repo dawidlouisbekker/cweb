@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_container
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: testdb
+      MYSQL_USER: testuser
+      MYSQL_PASSWORD: testpass
+    ports:
+      - "3307:3306"  # Host port 3307 -> MySQL default 3306
+    networks:
+      - dbnet
+
+  oracle:
+    image: gvenzl/oracle-xe:21-slim
+    container_name: oracle_container
+    restart: unless-stopped
+    environment:
+      ORACLE_PASSWORD: oraclepass
+      APP_USER: testuser
+      APP_USER_PASSWORD: testpass
+    ports:
+      - "1522:1521"  # Host port 1522 -> Oracle default 1521
+    networks:
+      - dbnet
+
+  postgres:
+    image: postgres:15
+    container_name: postgres_container
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: testdb
+      POSTGRES_USER: testuser
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5433:5432"  # Host port 5433 -> PostgreSQL default 5432
+    networks:
+      - dbnet
+
+networks:
+  dbnet:
+    driver: bridge

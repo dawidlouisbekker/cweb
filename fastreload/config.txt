@@ -1,2 +1,2 @@
-../server.h
-gcc ../main.c ../compiler/include/main.c -o ../cweb
+../base/server.h
+gcc ../main.c ../compiler/include/main.c ../base/utils/parse_header.o -o ../cweb 

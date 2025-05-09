@@ -1,5 +1,6 @@
 //#include "serverconf.h"
 #include "data/endpoints.h"
+#include "endpoints.h"
 #include "utils/hardware.h"
 #include "responses.h"
 

@@ -9,12 +9,9 @@
 #include "base/utils/colors.h"
 
 #define NUM_THREADS 10
-#define REQUESTS_PER_THREAD 10
+#define REQUESTS_PER_THREAD 100
 #define HOST "127.0.0.1"
-
-#define PORT 8081
-
-
+#define PORT 8082
 
 void *send_requests(void *arg) {
     for (int i = 0; i < REQUESTS_PER_THREAD; i++) {
@@ -24,48 +21,61 @@ void *send_requests(void *arg) {
             continue;
         }
 
-        struct hostent *server = gethostbyname(HOST);
-        if (server == NULL) {
-            fprintf(stderr, "No such host\n");
+        struct addrinfo hints, *res;
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+
+        int status = getaddrinfo(HOST, NULL, &hints, &res);
+        if (status != 0) {
+            fprintf(stderr, "getaddrinfo error: %s\n", gai_strerror(status));
             close(sock);
             continue;
         }
 
-        struct sockaddr_in server_addr = {0};
-        server_addr.sin_family = AF_INET;
-        server_addr.sin_port = htons(PORT);
-        memcpy(&server_addr.sin_addr.s_addr, server->h_addr_list[0], server->h_length);
+        struct sockaddr_in *server_addr = (struct sockaddr_in *)res->ai_addr;
+        server_addr->sin_port = htons(PORT);
 
-        if (connect(sock, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        if (connect(sock, (struct sockaddr *)server_addr, sizeof(*server_addr)) < 0) {
             perror("Connection failed");
+            freeaddrinfo(res);  // Don't forget to free addrinfo struct
             close(sock);
             continue;
         }
 
         const char *request = "GET / HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n";
-        send(sock, request, strlen(request), 0);
+        if (send(sock, request, strlen(request), 0) < 0) {
+            perror("Send failed");
+        }
 
-        char buffer[1024];
-        while (recv(sock, buffer, sizeof(buffer), 0) > 0); // Discard response
+        // Optionally receive the response
+        // char buffer[1024];
+        // while (recv(sock, buffer, sizeof(buffer), 0) > 0);
 
+        freeaddrinfo(res);
         close(sock);
     }
     return NULL;
 }
 
 int main() {
-
     pthread_t threads[NUM_THREADS];
     struct timeval start, end;
 
     gettimeofday(&start, NULL);
 
     for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_create(&threads[i], NULL, send_requests, NULL);
+        if (pthread_create(&threads[i], NULL, send_requests, NULL) != 0) {
+            perror("Thread creation failed");
+            return 1;
+        }
     }
 
     for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_join(threads[i], NULL);
+        if (pthread_join(threads[i], NULL) != 0) {
+            perror("Thread join failed");
+            return 1;
+        }
     }
 
     gettimeofday(&end, NULL);

@@ -1,4 +1,3 @@
-#define _GNU_SOURCE
 #include "shared.h"
 #include "colorprint.h"
 #include <stdlib.h>
@@ -16,10 +15,11 @@
 #include <signal.h>
 #include <execinfo.h>
 
+
 #define EVENT_SIZE (sizeof(struct inotify_event))
 #define BUF_LEN (1024 * (EVENT_SIZE + NAME_MAX + 1))
 
-#define MAX_THREADS 2
+#define MAX_THREADS 5
 
 #define MAX_CONF_LINES (MAX_THREADS * 2)
 #define CONF_LINE_SIZE 64
@@ -60,8 +60,13 @@ typedef struct {
 
 
 ThreadData thread_data[MAX_THREADS];
-
+char* previous_lines[MAX_CONF_LINES];
 char *stacks[MAX_THREADS];
+volatile int lock = 0;
+
+void __attribute__((destructor)) my_destructor() {
+    printf("This is the destructor function. Cleaning up before exit...\n");
+}
 
 int start_notify(void* arg)
 {
@@ -87,7 +92,7 @@ int start_notify(void* arg)
 
     printf("Thread %d watching '%s' for changes...\n", index ,data->filename);
     // ✅ Use a safe separate buffer for inotify read
-    char* buffer = malloc(EVENT_BUF_LEN);
+    char* buffer = (char *)malloc(EVENT_BUF_LEN);
     if (!buffer) {
         perror("malloc");
         close(fd);
@@ -125,7 +130,7 @@ int start_notify(void* arg)
     return 0;
 }
 
-volatile int lock = 0;
+
 void acquire_lock(volatile int* lock_addr) {
     while (__sync_lock_test_and_set(lock_addr, 1)) {
         // Busy wait (spin)
@@ -136,7 +141,7 @@ void release_lock(volatile int* lock_addr) {
     __sync_lock_release(lock_addr); // same as *lock_addr = 0;
 }
 
-char* previous_lines[MAX_CONF_LINES];
+
 
 void load_file(const char* filename, char* lines[], int* count) {
     FILE* file = fopen(filename, "r");
@@ -174,10 +179,10 @@ void compare_and_print_changes(const char* filename) {
 
 
 void spawn_watcher(int index) {
-    stacks[index] = malloc(THREAD_STACK_SIZE);
+    stacks[index] = (char *)malloc(THREAD_STACK_SIZE);
     if (!stacks[index]) return;
 
-    int* arg = malloc(sizeof(int));
+    int* arg = (int *)malloc(sizeof(int));
     *arg = index;
     pid_t tid = clone(
         start_notify,
@@ -191,6 +196,163 @@ void spawn_watcher(int index) {
     }
 
     return;
+};
+
+void showfiles() {
+
+};
+
+void get_filename(char watchfile[], size_t size){
+    while (1) {
+        //watchfile = readline("Enter filename: ");
+        printf("Enter filename: ");
+        if (fgets(watchfile, size, stdin)) {
+            watchfile[strcspn(watchfile, "\n")] = 0;  // Remove the newline character
+        };
+
+        // Check if the filename is empty (i.e., the user only pressed Enter)
+        if (watchfile[0] == '\0') {
+            printRed("NAME EMPTY");
+            continue;  // Skip to the next iteration of the loop
+        };
+
+        if (access(watchfile, F_OK) == 0) {
+            printGreen("FILE EXISTS");
+            return;
+        } else {
+            printf("The file does not exist.\n");
+        };
+    };
+    return;
+};
+
+
+void getFileNameAndCommand(){
+
+};
+
+void modifyWatchers(int id){
+
+};
+
+void addFile(char *watchfile, char *command, int *numThreads) {
+    printf("\nMax threads: %d\n", MAX_THREADS);
+    printf("Current number threads: %d\n", *numThreads);
+
+    watchfile[0] = '\0';
+    command[0] = '\0';
+
+    if (*numThreads >= MAX_THREADS) {
+        fprintf(stderr, "Too many threads! Max is %d\n", MAX_THREADS);
+        return;
+    }
+
+    get_filename(watchfile, 128);
+
+    //command = readline("Command: ");
+    printf("Enter command: ");
+    if (fgets(command, 128, stdin)) {
+        command[strcspn(command, "\n")] = 0;
+    };
+    if (watchfile[0] == '\0') {
+        printRed("Watch file cannot be empty!");
+        return;
+    };
+    if (command[0] == '\0') {
+        printRed("Command cannot be empty!\n");
+        return;
+    };
+
+    if (command[0] != '\0' && watchfile[0] != '\0') {
+        thread_data[*numThreads].filename = strdup(watchfile);
+        thread_data[*numThreads].command = strdup(command);
+    
+        spawn_watcher(*numThreads);
+    
+        printf("\n--- Starting thread ---\nFILE: %s\nCOMMAND: %s\n\n", watchfile, command);
+    };
+
+}
+
+void getCMDInput() {
+    char* watchfiles[MAX_THREADS];
+    char* commands[MAX_THREADS];
+
+    char watchfile[128];
+    char command[128];
+    int numThreads = 0;
+    int watching = 0;
+    char option[2];
+
+    //using_history();
+
+    while (1) {
+        if (watching == 0) {
+            addFile(watchfile, command, &numThreads);
+            watchfiles[numThreads] = strdup(watchfile);
+            commands[numThreads] = strdup(watchfile);
+            numThreads++;
+            watching = 1;
+        };
+        sleep(1);
+        printf(
+            "--- options ---\n"
+            "1. Add watcher\n"
+            "2. Modify watcher\n"
+            "3. View current\n\n"
+        );
+        printBlue("OPTION: ");
+        fflush(stdin);
+        if (fgets(option, sizeof(option), stdin)) {
+            // consume leftover newline if needed
+            if (option[strlen(option) - 1] == '\n') {
+                option[strlen(option) - 1] = '\0';
+            } else {
+                int c;
+                while ((c = getchar()) != '\n' && c != EOF);  // flush the rest
+            };
+            printf("Option selected: %c\n", option[0]);
+
+            switch (option[0])
+            {
+            case '1':
+                printYellow("ADD WATCHER");
+                addFile(watchfile, command, &numThreads);
+                watchfiles[numThreads] = strdup(watchfile);
+                commands[numThreads] = strdup(watchfile);
+                numThreads++;
+                break;
+            case '2':
+                printYellow("MODIFY WATCHER");
+                for (int i = 0; i < numThreads; i++) {
+                    printf("--- ");
+                    setYellow();
+                    printf("WATCHER: %d",i);
+                    resetCol();
+                    printf(" ---\n");
+                    printf("FILENAME: %s\n",watchfiles[i]);
+                    printf("COMMAND: %s\n",commands[i]);
+                };
+                break;
+            case '3':
+                for (int i = 0; i < numThreads; i++) {
+                    printf("--- ");
+                    setYellow();
+                    printf("WATCHER: %d",i);
+                    resetCol();
+                    printf(" ---\n");
+                    printf("FILENAME: %s\n",watchfiles[i]);
+                    printf("COMMAND: %s\n",commands[i]);
+                };
+                break;
+            default:
+                printRed("INVALID COMMAND");
+                break;
+            }
+        };
+        
+
+    }
 }
 
 void trackConf(const char* filename) {
@@ -203,7 +365,8 @@ void trackConf(const char* filename) {
     if (!conf) {
         perror("Failed to open file");
         return;
-    }
+    };
+
     while (fgets(watchfile, 128, conf)) {
         if (fgets(command, 128, conf)) {
             watchfile[strcspn(watchfile, "\n")] = 0;
@@ -281,8 +444,8 @@ int main(int argc, char* argv[]) {
         } else if (strcmp(argv[i],"-f") == 0 && i + 1 < argc && i + 1 < NAME_MAX) {
             filename = argv[i+1];
             break; 
-        } else if (strcmp(argv[i],"-cmd") == 0 && i + 1 < argc && i + 1 < NAME_MAX) {
-            filename = argv[i+1];
+        } else if (strcmp(argv[i],"-cmd") == 0) {
+            getCMDInput();
             break; 
         } else if (strcmp(argv[i],"-cnf") == 0 && i + 1 < argc && i + 1 < NAME_MAX) {
             filename = argv[i+1];

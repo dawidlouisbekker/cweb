@@ -1,0 +1,2 @@
+../../asm/tests/helloc.s
+../../asm/build.sh
