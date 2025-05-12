@@ -1,4 +1,5 @@
 #include "base/server.h"
+#include <signal.h>
 
 const char* endpoint = "endpoint ";
 const char* src_path = "./src";
